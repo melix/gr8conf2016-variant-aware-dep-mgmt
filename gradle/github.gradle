@@ -1,0 +1,10 @@
+apply plugin: 'org.ajoberstar.github-pages'
+
+githubPages {
+    repoUri = 'git@github.com:melix/gr8conf2016-variant-aware-dep-mgmt.git'
+    pages {
+        from file("$buildDir/asciidoc/deckjs")
+    }
+}
+
+publishGhPages.dependsOn(asciidoctor)
