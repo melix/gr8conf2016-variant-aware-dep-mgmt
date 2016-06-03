@@ -1,0 +1,403 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta name="author" content="Cédric Champeau" /><title>Variant-aware dependency management with Gradle</title><meta content="yes" name="apple-mobile-web-app-capable" /><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style" /><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui" name="viewport" /><link href="reveal.js/css/reveal.css" rel="stylesheet" /><link rel="stylesheet" href="reveal.js/css/theme/sky.css" id="theme" /><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.3.0/css/font-awesome.min.css" /><link href="reveal.js/lib/css/zenburn.css" rel="stylesheet" /><script>document.write( '<link rel="stylesheet" href="reveal.js/css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );</script><script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.js"></script></head><body><div class="reveal"><div class="slides"><section><h1>Variant-aware dependency management with Gradle</h1><p><small>Cédric Champeau</small></p></section><section id="gr8conf" data-background="reveal.js/css/theme/presentation-16-9-first.png"></section>
+<section id="who-am-i"><h2>Who am I</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">speaker {
+    name 'Cédric Champeau'
+    company 'Gradle Inc'
+    oss 'Apache Groovy committer',
+    successes (['Static type checker',
+                    'Static compilation',
+                    'Traits',
+                    'Markup template engine',
+                    'DSLs'])
+        failures Stream.of(bugs),
+        twitter '@CedricChampeau',
+        github 'melix',
+        extraDescription '''Groovy in Action 2 co-author
+Misc OSS contribs (Gradle plugins, deck2pdf, jlangdetect, ...)'''
+}</code></pre></div></div>
+<div class="imageblock" style=""><div class="content"><img src="./images/GradleLogoReg.png" alt="GradleLogoReg" /></div></div></section>
+<section id="groovy-in-action-2"><h2>Groovy in Action 2</h2><div class="paragraph"><p><span class="image"><img src="./images/koenig2.png" alt="koenig2" /></span></p></div>
+<div class="paragraph"><p><a href="https://www.manning.com/books/groovy-in-action-second-edition" class="bare">https://www.manning.com/books/groovy-in-action-second-edition</a></p></div>
+<div class="paragraph"><p>Coupon <em>ctwgr8conftw</em></p></div></section>
+<section id="principles"><h2>Principles</h2><div class="ulist"><ul><li><p>Apps target different platforms</p></li><li><p>Apps have different flavors</p></li><li><p>Each of them have different dependency set</p></li><li><p>How can you create your own variants?</p></li></ul></div></section>
+<section><section id="declaring-a-dependency"><h2>Declaring a dependency</h2></section><section id="declare-a-dependency-on-a-library-of-the-same-project"><h2>Declare a dependency on a library of the same project</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">model {
+    components {
+        main(JvmLibrarySpec) {
+            sources {
+                java {
+                    dependencies {
+                        library 'dep'
+                    }
+                }
+            }
+        }
+        dep(JvmLibrarySpec)
+    }
+}</code></pre></div></div></section><section id="declare-a-dependency-on-a-library-from-another-project"><h2>Declare a dependency on a library from another project</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">model {
+    components {
+        main(JvmLibrarySpec) {
+            sources {
+                java {
+                    dependencies {
+                        project ':other' library 'dep'
+                    }
+                }
+            }
+        }
+    }
+}</code></pre></div></div></section><section id="shortcut-notation-if-target-project-only-has-one-library"><h2>Shortcut notation if target project only has one library</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">model {
+    components {
+        main(JvmLibrarySpec) {
+            sources {
+                java {
+                    dependencies {
+                        project ':other'
+                    }
+                }
+            }
+        }
+    }
+}</code></pre></div></div></section></section>
+<section><section id="platform-aware-dependency-management"><h2>Platform-aware dependency management</h2></section><section id="declaring-target-platform-of-a-component"><h2>Declaring target platform of a component</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">model {
+    components {
+        main(JvmLibrarySpec) {
+            targetPlatform 'java6'
+            targetPlatform 'java7'
+        }
+	dep(JvmLibrarySpec) {
+            targetPlatform 'java7'
+        }
+    }
+}</code></pre></div></div></section><section id="dependencies-with-platforms-1-3"><h2>Dependencies with platforms (1/3)</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">model {
+    components {
+        main(JvmLibrarySpec) {
+            targetPlatform 'java6'
+            targetPlatform 'java7'
+            sources {
+		java {
+		    dependencies {
+		        library 'dep'
+		    }
+		}
+	    }
+        }
+	dep(JvmLibrarySpec) {
+            targetPlatform 'java7'
+        }
+    }
+}</code></pre></div></div></section><section id="dependencies-with-platforms-2-3"><h2>Dependencies with platforms (2/3)</h2><div class="listingblock"><div class="content"><pre class="highlight"><code>$ ./gradlew platform-aware:java7MainJar
+:platform-aware:compileDepJarDepJava
+:platform-aware:createDepJar
+:platform-aware:depJar
+:platform-aware:compileJava7MainJarMainJava
+:platform-aware:createJava7MainJar
+:platform-aware:java7MainJar
+
+BUILD SUCCESSFUL
+
+Total time: 1.264 secs</code></pre></div></div></section><section id="dependencies-with-platforms-3-3"><h2>Dependencies with platforms (3/3)</h2><div class="listingblock"><div class="content"><pre class="highlight"><code>$ ./gradlew platform-aware:java6MainJar
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Could not resolve all dependencies for 'Jar 'java6MainJar'' source set 'Java source 'main:java''
+&gt; Cannot find a compatible binary for library 'dep' (Java SE 6). Available platforms: [Java SE 7]
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output.
+
+BUILD FAILED
+
+Total time: 1.169 secs</code></pre></div></div></section><section id="in-short"><h2>In short</h2><div class="ulist"><ul><li><p>A component can target multiple versions of Java</p></li><li><p>Produces as many jars as there are target platforms</p></li><li><p>By default, will use the platform Gradle is executed with</p></li><li><p>A dependency will resolve to the <strong>highest compatible version</strong></p></li><li><p>Error messages tell which platforms are available</p></li></ul></div></section></section>
+<section><section id="custom-libraries"><h2>Custom libraries</h2><div class="ulist"><ul><li><p>It is possible to define <strong>custom library types</strong></p></li><li><p>To be compatible with JVM dependency management, they have to</p><div class="ulist"><ul><li><p>extend <code>LibrarySpec</code></p></li><li><p>produce at least one binary of type <code>JarBinarySpec</code></p></li></ul></div></li></ul></div></section><section id="example"><h2>Example</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">interface MyLib extends LibrarySpec {}
+class DefaultMyLib extends BaseComponentSpec implements MyLib {}
+
+class ComponentTypeRules extends RuleSource {
+
+    @ComponentType
+    void registerComponent(
+            TypeBuilder&lt;MyLib&gt; builder) {
+        builder.defaultImplementation(DefaultMyLib)
+    }
+
+    @ComponentBinaries
+    void createBinaries(
+            ModelMap&lt;JarBinarySpec&gt; binaries,
+            MyLib library,
+            PlatformResolvers platforms,
+            @Path("buildDir") File buildDir,
+            JavaToolChainRegistry toolChains) {
+
+        def platform = platforms.resolve(JavaPlatform, DefaultPlatformRequirement.create("java${JavaVersion.current().majorVersion}"))
+        def toolChain = toolChains.getForPlatform(platform)
+        def baseName = "${library.name}"
+        String binaryName = "${baseName}Jar"
+        binaries.create(binaryName) { jar -&gt;
+            jar.toolChain = toolChain
+            jar.targetPlatform = platform
+        }
+    }
+
+}
+
+apply type: ComponentTypeRules</code></pre></div></div></section><section id="usage"><h2>Usage</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">model {
+    components {
+        main(MyLib) {
+            sources {
+                java(JavaSourceSet)
+            }
+        }
+    }</code></pre></div></div></section><section id="dependencies-onto-custom-components"><h2>Dependencies onto custom components</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">model {
+    components {
+        main(MyLib) {
+            sources {
+                java(JavaSourceSet) {
+                    dependencies {
+                        library 'dep'
+                    }
+                }
+            }
+        }
+        dep(MyLib) {
+            sources {
+                java(JavaSourceSet)
+            }
+        }
+    }
+}</code></pre></div></div></section><section id="what-depends-on-what"><h2>What depends on what?</h2><div class="ulist"><ul><li><p>A <code>JvmLibrarySpec</code> can depend on a <code>CustomLib</code></p></li><li><p>A <code>CustomLib</code> can depend on a <code>JvmLibrarySpec</code></p></li><li><p>Combibations of the above</p></li></ul></div></section></section>
+<section><section id="defining-custom-binaries"><h2>Defining custom binaries</h2><div class="ulist"><ul><li><p>Custom binaries are the entry point for custom variants</p></li><li><p>Can be unmanaged or <code>@Managed</code></p></li></ul></div></section><section id="example-2"><h2>Example</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">@Managed
+interface MyJar extends JarBinarySpec {}
+
+...
+
+    @ComponentBinaries
+    void createBinaries(
+            ModelMap&lt;MyJar&gt; binaries,
+            MyLib library,
+            PlatformResolvers platforms,
+            @Path("buildDir") File buildDir,
+            JavaToolChainRegistry toolChains) {
+
+        def platform = platforms.resolve(JavaPlatform, DefaultPlatformRequirement.create("java${JavaVersion.current().majorVersion}"))
+        def toolChain = toolChains.getForPlatform(platform)
+        def baseName = "${library.name}"
+        String binaryName = "${baseName}Jar"
+        binaries.create(binaryName) { jar -&gt;
+            jar.toolChain = toolChain
+            jar.targetPlatform = platform
+        }
+    }
+
+...</code></pre></div></div></section></section>
+<section><section id="custom-variant-dimensions"><h2>Custom variant dimensions</h2></section><section id="main-steps"><h2>Main steps</h2><div class="ulist"><ul><li><p>Define a custom library type</p></li><li><p>Define a custom binary type</p></li><li><p>Annotate some properties with <code>@Variant</code></p></li></ul></div></section><section id="code-variant-code"><h2><code>@Variant</code></h2><div class="ulist"><ul><li><p>Must be set on a getter</p></li><li><p>The type can be either a <code>String</code></p></li><li><p>or a <code>? extend Named</code></p></li></ul></div></section><section id="define-a-custom-library-type"><h2>Define a custom library type</h2><div class="ulist"><ul><li><p>The library interface also defines the DSL</p></li></ul></div>
+<div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">trait MyLib implements LibrarySpec {
+    List&lt;String&gt; flavors = []
+    void flavors(String... flavors) { this.flavors.addAll(flavors as List) }
+}
+class DefaultMyLib extends BaseComponentSpec implements MyLib {}</code></pre></div></div></section><section id="define-the-binary-type"><h2>Define the binary type</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">@Managed
+interface MyJar extends org.gradle.jvm.internal.JarBinarySpecInternal {
+    @Variant
+    String getFlavor()
+    void setFlavor(String flavor)
+}</code></pre></div></div></section><section id="update-the-code-componentbinaries-code-method-to-create-binaries"><h2>Update the <code>@ComponentBinaries</code> method to create binaries</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">        library.flavors.each { flavor -&gt;
+            String binaryName = "${baseName}${flavor.capitalize()}Jar"
+            binaries.create(binaryName, MyJar) { jar -&gt;
+                jar.toolChain = toolChain
+                jar.targetPlatform = platform
+                jar.flavor = flavor
+            }
+        }</code></pre></div></div></section><section id="describe-the-components"><h2>Describe the components</h2><div class="listingblock"><div class="content"><pre class="highlight"><code>model {
+    components {
+        main(MyLib) {
+            flavors 'free','paid'
+            sources {
+                java(JavaSourceSet) {
+                    dependencies {
+                        library 'dep'
+                    }
+                }
+            }
+        }
+        dep(MyLib) {
+            flavors 'free'
+            sources {
+                java(JavaSourceSet)
+            }
+        }
+    }
+}</code></pre></div></div></section><section id="build-the-free-variant"><h2>Build the "free" variant</h2><div class="listingblock"><div class="content"><pre class="highlight"><code>$ ./gradlew customvariants:mainFreeJar
+...
+:customvariants:compileDepFreeJarDepJava
+:customvariants:createDepFreeJar
+:customvariants:depFreeJar
+:customvariants:compileMainFreeJarMainJava
+:customvariants:createMainFreeJar
+:customvariants:mainFreeJar
+
+BUILD SUCCESSFUL
+
+Total time: 2.08 secs</code></pre></div></div></section><section id="build-the-paid-variant"><h2>Build the "paid" variant</h2><div class="listingblock"><div class="content"><pre class="highlight"><code>$ gw customvariants:mainPaidJar
+...
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Could not resolve all dependencies for 'Jar 'mainPaidJar'' source set 'Java source 'main:java''
+&gt; Cannot find a compatible binary for library 'dep' (Java SE 8).
+      Required platform 'java8', available: 'java8'
+      Required flavor 'paid', available: 'free'
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output.</code></pre></div></div></section><section id="detailed-errors-1-2"><h2>Detailed errors (1/2)</h2><div class="listingblock"><div class="content"><pre class="highlight"><code>$ ./gradlew customvariants:fourthFreeJar
+...
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Could not resolve all dependencies for 'Jar 'fourthFreeJar'' source set 'Java source 'fourth:java''
+&gt; Cannot find a compatible binary for library 'third' (Java SE 8).
+      Required platform 'java8', available: 'java8' on Jar 'thirdDemoJar','java8' on Jar 'thirdSharewhareJar'
+      Required flavor 'free', available: 'demo' on Jar 'thirdDemoJar','sharewhare' on Jar 'thirdSharewhareJar'</code></pre></div></div></section><section id="detailed-errors-2-2"><h2>Detailed errors (2/2)</h2><div class="listingblock"><div class="content"><pre class="highlight"><code>$ gw customvariants:fifthJar
+...
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Could not resolve all dependencies for 'Jar 'fifthJar'' source set 'Java source 'fifth:java''
+&gt; Multiple binaries available for library 'third' (Java SE 8) :
+     - Jar 'thirdDemoJar':
+         * flavor 'demo'
+         * targetPlatform 'java8'
+     - Jar 'thirdSharewhareJar':
+         * flavor 'sharewhare'
+         * targetPlatform 'java8'</code></pre></div></div></section></section>
+<section id="how-matching-works"><h2>How matching works</h2><div class="ulist"><ul><li><p><code>JavaPlatform</code> matches the <strong>highest compatible platform</strong></p></li><li><p>If a variant is <code>null</code> in either the consumer or the candidate library: dimension is <strong>ignored</strong></p></li><li><p>If a variant is not null:</p><div class="ulist"><ul><li><p>if the type is <code>String</code>, matches <strong>stricly</strong></p></li><li><p>if the type is <code>Named</code>, matches <strong>strictly</strong> on <code>getName()</code>, unless a custom <code>VariantDimensionSelector</code> is provided</p></li><li><p><code>JavaPlatform</code> is handled through a specific <code>VariantDimensionSelector</code> (<code>DefaultJavaPlatformVariantDimensionSelector</code>)</p></li></ul></div></li></ul></div></section>
+<section><section id="bonus-binary-level-dependencies"><h2>Bonus: binary-level dependencies</h2></section><section id="variant-specific-dependencie"><h2>Variant-specific dependencie</h2><div class="ulist"><ul><li><p>A <strong>source set</strong> can define its own dependencies</p></li></ul></div>
+<div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">model {
+    components {
+        main(AndroidLikeLib) {
+            flavors 'free', 'paid'
+            sources {
+                paid {
+                    // some extra dependencies for paid flavor
+                }
+            }
+        }
+    }
+}</code></pre></div></div></section><section id="shared-source-set-dependencies"><h2>Shared source set dependencies</h2><div class="ulist"><ul><li><p>But for a shared source set?</p></li></ul></div>
+<div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">model {
+    components {
+        main(JvmLibrarySpec) {
+            targetPlatform 'java6'
+            targetPlatform 'java7'
+            binaries.named('java6MainJar') {
+                sources.named('java') {
+                    source.srcDir file("$projectDir/src/main/java7compat")
+                }
+            }
+            binaries.named('java7MainJar') {
+                sources.named('java') {
+                    dependencies {
+                        library 'dep'
+                    }
+                }
+            }
+        }
+        dep(JvmLibrarySpec) {
+            targetPlatform 'java7'
+        }
+    }
+}</code></pre></div></div></section><section id="what-we-can-do"><h2>What we can do?</h2><div class="ulist"><ul><li><p>Create new binary level source sets</p></li><li><p>But no variation of dependencies for a specific source set</p></li></ul></div>
+<div class="listingblock"><div class="content"><pre class="highlight"><code>model {
+    components {
+        main(JvmLibrarySpec) {
+            targetPlatform 'java6'
+            targetPlatform 'java7'
+            binaries.named('java6MainJar') {
+                sources {
+                    java6(JavaSourceSet) // creates a Java 6 specific source set
+                    dependencies {
+                        project ':other' library 'lib'
+                    }
+                }
+            }
+        }
+    }
+}</code></pre></div></div></section><section id="conclusion-gradle"><h2>Conclusion : Gradle&#8230;&#8203;</h2><div class="ulist"><ul><li><p>Natively supports Java variant aware dependency management</p></li><li><p>Supports defining custom variant dimensions</p></li></ul></div></section><section id="but"><h2>But&#8230;&#8203;</h2><div class="ulist"><ul><li><p>New (experimental) Java software model only</p></li><li><p>No support for external dependencies yet</p></li><li><p>No support for publishing either</p></li></ul></div></section><section id="questions"><h2>Questions?</h2></section></section></div></div><script src="reveal.js/lib/js/head.min.js"></script><script src="reveal.js/js/reveal.js"></script><script>// See https://github.com/hakimel/reveal.js#configuration for a full list of configuration options
+Reveal.initialize({
+  // Display controls in the bottom right corner
+  controls: true,
+  // Display a presentation progress bar
+  progress: true,
+  // Display the page number of the current slide
+  slideNumber: true,
+  // Push each slide change to the browser history
+  history: true,
+  // Enable keyboard shortcuts for navigation
+  keyboard: true,
+  // Enable the slide overview mode
+  overview: true,
+  // Vertical centering of slides
+  center: true,
+  // Enables touch navigation on devices with touch input
+  touch: true,
+  // Loop the presentation
+  loop: false,
+  // Change the presentation direction to be RTL
+  rtl: false,
+  // Turns fragments on and off globally
+  fragments: true,
+  // Flags if the presentation is running in an embedded mode,
+  // i.e. contained within a limited portion of the screen
+  embedded: false,
+  // Number of milliseconds between automatically proceeding to the
+  // next slide, disabled when set to 0, this value can be overwritten
+  // by using a data-autoslide attribute on your slides
+  autoSlide: 0,
+  // Stop auto-sliding after user input
+  autoSlideStoppable: true,
+  // Enable slide navigation via mouse wheel
+  mouseWheel: false,
+  // Hides the address bar on mobile devices
+  hideAddressBar: true,
+  // Opens links in an iframe preview overlay
+  previewLinks: false,
+  // Theme (e.g., beige, black, league, night, serif, simple, sky, solarized, white)
+  // NOTE setting the theme in the config no longer works in reveal.js 3.x
+  //theme: Reveal.getQueryHash().theme || 'sky',
+  // Transition style (e.g., none, fade, slide, convex, concave, zoom)
+  transition: Reveal.getQueryHash().transition || 'linear',
+  // Transition speed (e.g., default, fast, slow)
+  transitionSpeed: 'default',
+  // Transition style for full page slide backgrounds (e.g., none, fade, slide, convex, concave, zoom)
+  backgroundTransition: 'fade',
+  // Number of slides away from the current that are visible
+  viewDistance: 3,
+  // Parallax background image (e.g., "'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg'")
+  parallaxBackgroundImage: '',
+  // Parallax background size in CSS syntax (e.g., "2100px 900px")
+  parallaxBackgroundSize: '',
+
+  // The "normal" size of the presentation, aspect ratio will be preserved
+  // when the presentation is scaled to fit different resolutions. Can be
+  // specified using percentage units.
+  width: 960,
+  height: 700,
+
+  // Factor of the display size that should remain empty around the content
+  margin: 0.1,
+
+  // Bounds for smallest/largest possible scale to apply to content
+  minScale: 0.2,
+  maxScale: 1.5,
+
+  // Optional libraries used to extend on reveal.js
+  dependencies: [
+      { src: 'reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'reveal.js/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'reveal.js/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'reveal.js/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+      { src: 'reveal.js/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+  ]
+});</script></body></html>
